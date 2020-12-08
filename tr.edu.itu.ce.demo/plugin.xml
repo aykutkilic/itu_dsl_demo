@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="windows-1252"?>
+<?eclipse version="3.0"?>
+<plugin>
+	<extension point="org.eclipse.emf.ecore.generated_package">
+		<package
+			uri = "http://www.edu.tr/itu/ce/demo/ProtocolDSl"
+			class = "tr.edu.itu.ce.demo.protocolDSl.ProtocolDSlPackage"
+			genModel = "model/generated/ProtocolDSl.genmodel" />
+	</extension>
+</plugin>

@@ -1,0 +1,53 @@
+grammar tr.edu.itu.ce.demo.ProtocolDSl with org.eclipse.xtext.common.Terminals
+
+generate protocolDSl "http://www.edu.tr/itu/ce/demo/ProtocolDSl"
+
+Model:
+	protocols+=Protocol*;
+
+Protocol:
+	'protocol' name=ID '{'
+		messages+=Message+
+	'}';
+
+Message:
+	'message' name=ID '{'
+		entries+=Entry*
+	'}';
+
+Entry:
+	Spec | EnumSpec | BitMask | Csum; //| MessageRef;
+	
+Spec:
+	type=Type ('[' (count=INT | ref=[Spec]) ']')? name=ID ('=' value=ValueSpec)?;
+
+ValueSpec:
+	'[' items+=HEX+ ']';
+
+EnumSpec:
+	type=Type 'enum' name=ID '{'
+		entries+=EnumEntry+
+	'}';
+
+EnumEntry:
+	name=ID value=HEX?;
+
+BitMask:
+	'bit-mask' name=ID '{' regions+=BitRegion (',' regions+=BitRegion)* '}';
+
+BitRegion:
+	from=INT ('-' to=INT)? ':' name=ID;
+
+Csum:
+	'check-sum' type=Type crc?='crc'? name=ID;
+
+	//MessageRef:
+//	'message' message=[Message] name=ID;
+Type:
+	'u8' | 's8' | 'u16' | 's16' | 'u32' | 's32';
+
+terminal HEX:
+	(HEX_DIGIT HEX_DIGIT)+ 'h';
+
+terminal HEX_DIGIT:
+	('0'..'9' | 'A'..'F');

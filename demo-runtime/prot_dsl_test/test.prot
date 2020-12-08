@@ -1,0 +1,37 @@
+protocol demo_protocol {
+	message StartSession {
+		u8[2] HDR = [DEh ADh]
+		u8[32] ID
+		check-sum u16 CSUM
+	}
+	
+	message Ping {
+		u8[2] HDR = [DEh EDh]
+		check-sum u8 CSUM
+	}
+	
+	message Pong {
+		u8[2] HDR = [FEh EDh]
+		check-sum u8 CSUM
+	}
+	
+	message KeyboardEvent {
+		u8[2] HDR = [CAh FEh]
+		
+		u8 enum EVENT { // Command
+			KEY_DOWN 01h
+			KEY_UP   FFh
+		}
+		
+		bit-mask MODIF { 0:SHIFT, 1:ALT, 2:CTRL, 3-7:RSV }
+		u8 KEY
+		
+		check-sum u16 CSUM
+	}
+	
+	message TerminateSession {
+		u8[4] HDR = [BEh EFh]
+		check-sum u32 CSUM1
+		check-sum u32 CSUM2
+	}
+}
