@@ -1,10 +1,10 @@
 Manifest-Version: 1.0
-Automatic-Module-Name: org.xtext.example.mydsl
+Automatic-Module-Name: tr.edu.itu.ce.demo
 Bundle-ManifestVersion: 2
-Bundle-Name: org.xtext.example.mydsl
-Bundle-Vendor: My Company
+Bundle-Name: tr.edu.itu.ce.demo
+Bundle-Vendor: 
 Bundle-Version: 1.0.0.qualifier
-Bundle-SymbolicName: org.xtext.example.mydsl; singleton:=true
+Bundle-SymbolicName: tr.edu.itu.ce.demo; singleton:=true
 Bundle-ActivationPolicy: lazy
 Require-Bundle: org.eclipse.xtext,
  org.eclipse.xtext.xbase,

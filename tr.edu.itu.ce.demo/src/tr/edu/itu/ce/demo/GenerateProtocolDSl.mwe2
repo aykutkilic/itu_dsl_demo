@@ -10,7 +10,7 @@ Workflow {
 	component = XtextGenerator {
 		configuration = {
 			project = StandardProjectConfig {
-				baseName = "org.xtext.example.mydsl"
+				baseName = "tr.edu.itu.ce.demo"
 				rootPath = rootPath
 				eclipsePlugin = {
 					enabled = true

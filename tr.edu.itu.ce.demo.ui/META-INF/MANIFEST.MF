@@ -1,13 +1,13 @@
 Manifest-Version: 1.0
-Automatic-Module-Name: org.xtext.example.mydsl.ui
+Automatic-Module-Name: tr.edu.itu.ce.demo.ui
 Bundle-ManifestVersion: 2
-Bundle-Name: org.xtext.example.mydsl.ui
-Bundle-Vendor: My Company
+Bundle-Name: tr.edu.itu.ce.demo.ui
+Bundle-Vendor: 
 Bundle-Version: 1.0.0.qualifier
-Bundle-SymbolicName: org.xtext.example.mydsl.ui; singleton:=true
+Bundle-SymbolicName: tr.edu.itu.ce.demo.ui; singleton:=true
 Bundle-ActivationPolicy: lazy
-Require-Bundle: org.xtext.example.mydsl,
- org.xtext.example.mydsl.ide,
+Require-Bundle: tr.edu.itu.ce.demo,
+ tr.edu.itu.ce.demo.ide,
  org.eclipse.xtext.ui,
  org.eclipse.xtext.ui.shared,
  org.eclipse.xtext.ui.codetemplates.ui,
@@ -19,6 +19,7 @@ Require-Bundle: org.xtext.example.mydsl,
 Import-Package: org.apache.log4j
 Bundle-RequiredExecutionEnvironment: JavaSE-11
 Export-Package: tr.edu.itu.ce.demo.ui.quickfix,
- org.xtext.example.mydsl.ui.internal,
- tr.edu.itu.ce.demo.ui.contentassist
-Bundle-Activator: org.xtext.example.mydsl.ui.internal.MydslActivator
+ tr.edu.itu.ce.demo.ui.internal,
+ tr.edu.itu.ce.demo.ui.contentassist,
+ tr.edu.itu.ce.demo.ui.internal
+Bundle-Activator: tr.edu.itu.ce.demo.ui.internal.DemoActivator
