@@ -10,7 +10,7 @@ protocol demo_protocol {
 		check-sum u8 CSUM
 	}
 	
-	message Pong {
+	message Pong { 
 		u8[2] HDR = [FEh EDh]
 		check-sum u8 CSUM
 	}

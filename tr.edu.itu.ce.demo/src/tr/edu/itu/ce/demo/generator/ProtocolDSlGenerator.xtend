@@ -29,7 +29,11 @@ class ProtocolDSlGenerator extends AbstractGenerator {
 		Resource resource,
 		IFileSystemAccess2 fsa,
 		IGeneratorContext context
-	) {
+	) {		
+		fsa.generateFile('build.bat', generateBuildBat())
+		fsa.generateFile('Makefile', generateMakefile(resource.contents.head as Protocol))
+
+		fsa.generateFile('Compiler.h', generateCompilerH())
 		var messages = resource.allContents.filter(Message).toList
 		messages.forEach [
 			fsa.generateFile(it.name + '.h', generateMessageCHeader(it))
@@ -37,7 +41,82 @@ class ProtocolDSlGenerator extends AbstractGenerator {
 			fsa.generateFile(it.name + '.py', generateMessagePyModule(it))
 		]
 	}
+	
+	def generateBuildBat() '''
+		make
+	'''
 
+	def generateMakefile(Protocol protocol) '''
+		LIB_NAME=«protocol.name»
+		TOOLCHAIN_PREFIX=
+		
+		AR=$(TOOLCHAIN_PREFIX)ar
+		CC=$(TOOLCHAIN_PREFIX)gcc
+		GDB=$(TOOLCHAIN_PREFIX)gdb
+		OBJCOPY=$(TOOLCHAIN_PREFIX)objcopy
+		NM=$(TOOLCHAIN_PREFIX)nm
+		SIZE=$(TOOLCHAIN_PREFIX)size
+		STRIP=$(TOOLCHAIN_PREFIX)strip
+		READELF=$(TOOLCHAIN_PREFIX)readelf
+		
+		OPT := -O0 -g3
+		
+		ifdef RELEASE
+		OPT := -O3
+		endif
+		
+		ifdef SIZEOPT
+		OPT := -Os
+		endif
+		
+		SHAREDFLABS := $(OPT)
+		AFLAGS := -c -x assembler $(SHAREDFLAGS) -Wa,-I.
+		
+		CFLAGS := -c $(SHAREDFLAGS) -std=c99
+		
+		«FOR msg : protocol.messages»
+		SRCS += «msg.name».c
+		«ENDFOR»
+		
+		OBJS := $(SRCS:.c=.o)
+		DEPS := $(SRCS:.c=.d)
+		
+		.PHONY: $(LIB_NAME)_lib.a
+		
+		all: $(LIB_NAME)_lib.a
+		rebuild: clean all
+		
+		proj: $(LIB_NAME)_lib.a
+		
+		-include $(DEPS)
+		
+		%.o: %.c
+			@echo CC $<
+			@$(CC) -c $(CFLAGS) $< -o $@
+			@$(CC) $(CFLAGS) -MM -MT $@ -MF $(patsubst %.o,%.d,$@) $<
+			
+		$(LIB_NAME)_lib.a: $(OBJS)
+			@echo LD $@
+			@$(AR) rcs $@ $^
+			
+			@$(SIZE) $(PROJ_NAME)_lib.a 
+	'''
+	
+	def generateCompilerH() '''
+		typedef unsigned char u8;
+		typedef unsigned short u16;
+		typedef unsigned long u32;
+		typedef unsigned long long u64;
+		
+		typedef signed char s8;
+		typedef signed short s16;
+		typedef signed long s32;
+		typedef signed long long s64;
+		
+		typedef float r32;
+		typedef double r64;
+	'''
+	
 	def generateMessageCHeader(Message msg) '''
 		// -------------------------------------------------------------
 		// Protocol «(msg.eContainer as Protocol).name»
@@ -80,7 +159,7 @@ class ProtocolDSlGenerator extends AbstractGenerator {
 	def generateBitmaskDef(BitMask bm) '''
 		typedef struct {
 			«FOR region : bm.regions»
-				unsigned «region.name» : «region.to-region.from+1»;
+				unsigned «region.name» : «if(region.to>region.from) (region.to-region.from+1) else 1»;
 			«ENDFOR»
 		} «bm.s_name»;
 	'''
@@ -109,6 +188,7 @@ class ProtocolDSlGenerator extends AbstractGenerator {
 		// Generated code. Please do not modify.
 		// -------------------------------------------------------------
 		
+		#include <string.h>
 		#include "«msg.name».h"
 		
 		#define MAX_BYTES_IN_A_CALL (sizeof(«msg.t_name»)*2)
@@ -135,43 +215,29 @@ class ProtocolDSlGenerator extends AbstractGenerator {
 			«msg.name»_rx_section_i = 0;
 			«msg.name»_rx_state = «msg.entries.head.rx_st_name»;
 		}
+
 		
-		int process_«msg.name»_rx() {
-			u8 bytes_read;
-			u8 read_buffer;
-			u16 total_bytes_read;
+		int process_«msg.name»_rx_byte(u8 data) {
+			«msg.name»_rx_buffer[«msg.name»_rx_msg_i++] = data;
 			
-			while(read(&read_buffer)) {
-				if( total_bytes_read++ > MAX_BYTES_IN_A_CALL ) return -1;
-				«msg.name»_rx_buffer[«msg.name»_rx_msg_i++] = read_buffer;
+			switch( «msg.name»_rx_state ) {
+			«FOR e : msg.entries»
+				case «e.rx_st_name»: {
+					«generateMatcher(e)»
+					break;
+				}
 				
-				switch( «msg.name»_rx_state ) {
-				«FOR e : msg.entries»
-					case «e.rx_st_name»:
-						«generateMatcher(e)»
-						break;
-					
-				«ENDFOR»
+			«ENDFOR»
 			}
 		}
-	'''
-
-	def generateMessagePyModule(Message msg) '''
-		# -------------------------------------------------------------
-		# Protocol «(msg.eContainer as Protocol).name»
-		# Message  «msg.name»
-		# Date     «new Date(System.currentTimeMillis)»
-		# 
-		# Generated code. Please do not modify.
-		# -------------------------------------------------------------
 	'''
 
 	def dispatch generateMatcher(Spec spec) '''
 		«val msg=spec.parent_msg»
 		«IF spec.value !== null»
 			// Matching values
-			u8 values[«spec.value.items.length»] = { «FOR v : spec.value.items SEPARATOR ','»«v.c_hex»«ENDFOR» };
-			if( read_buffer == values[«msg.name»_rx_section_i] ) {
+			u8 values[] = { «FOR v : spec.value.items SEPARATOR ','»«v.c_hex»«ENDFOR» };
+			if( data == values[«msg.name»_rx_section_i] ) {
 				«msg.name»_rx_section_i++;
 			} else
 				reset_«msg.name»_rx();
@@ -195,7 +261,7 @@ class ProtocolDSlGenerator extends AbstractGenerator {
 			«ELSE»
 				// successfully received the message. Copying buffer to instance.
 				memcpy(«msg.name»_msg.u8, «msg.name»_rx_buffer, sizeof(«msg.name»_msg));
-				reset_dummy_rx();
+				reset_«msg.name»_rx();
 				return 1;
 			«ENDIF»
 		}
@@ -222,6 +288,15 @@ class ProtocolDSlGenerator extends AbstractGenerator {
 	'''
 
 	
+	def generateMessagePyModule(Message msg) '''
+		# -------------------------------------------------------------
+		# Protocol «(msg.eContainer as Protocol).name»
+		# Message  «msg.name»
+		# Date     «new Date(System.currentTimeMillis)»
+		# 
+		# Generated code. Please do not modify.
+		# -------------------------------------------------------------
+	'''
 	
 
 	static def selector(Entry e) '''«e.parent_msg_name»_msg.msg.«e.name.toUpperCase»'''

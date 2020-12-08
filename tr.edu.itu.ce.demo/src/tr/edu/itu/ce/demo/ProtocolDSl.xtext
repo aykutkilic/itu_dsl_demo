@@ -2,9 +2,6 @@ grammar tr.edu.itu.ce.demo.ProtocolDSl with org.eclipse.xtext.common.Terminals
 
 generate protocolDSl "http://www.edu.tr/itu/ce/demo/ProtocolDSl"
 
-Model:
-	protocols+=Protocol*;
-
 Protocol:
 	'protocol' name=ID '{'
 		messages+=Message+
