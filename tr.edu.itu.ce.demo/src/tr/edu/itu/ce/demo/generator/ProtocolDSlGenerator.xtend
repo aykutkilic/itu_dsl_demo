@@ -96,7 +96,7 @@ class ProtocolDSlGenerator extends AbstractGenerator {
 			@$(CC) $(CFLAGS) -MM -MT $@ -MF $(patsubst %.o,%.d,$@) $<
 			
 		$(LIB_NAME)_lib.a: $(OBJS)
-			@echo LD $@
+			@echo AR $@
 			@$(AR) rcs $@ $^
 			
 			@$(SIZE) $(PROJ_NAME)_lib.a 
