@@ -29,7 +29,7 @@ class ProtocolDSlGenerator extends AbstractGenerator {
 		Resource resource,
 		IFileSystemAccess2 fsa,
 		IGeneratorContext context
-	) {		
+	) {
 		fsa.generateFile('build.bat', generateBuildBat())
 		fsa.generateFile('Makefile', generateMakefile(resource.contents.head as Protocol))
 
@@ -72,7 +72,7 @@ class ProtocolDSlGenerator extends AbstractGenerator {
 		SHAREDFLABS := $(OPT)
 		AFLAGS := -c -x assembler $(SHAREDFLAGS) -Wa,-I.
 		
-		CFLAGS := -c $(SHAREDFLAGS) -std=c99
+		CFLAGS := -c $(SHAREDFLAGS) -std=c99 -fPIC
 		
 		«FOR msg : protocol.messages»
 		SRCS += «msg.name».c
@@ -81,9 +81,9 @@ class ProtocolDSlGenerator extends AbstractGenerator {
 		OBJS := $(SRCS:.c=.o)
 		DEPS := $(SRCS:.c=.d)
 		
-		.PHONY: $(LIB_NAME)_lib.a
+		.PHONY: $(LIB_NAME)_lib.a $(LIB_NAME)_lib_py.so
 		
-		all: $(LIB_NAME)_lib.a
+		all: $(LIB_NAME)_lib.a $(LIB_NAME)_lib_py.so
 		rebuild: clean all
 		
 		proj: $(LIB_NAME)_lib.a
@@ -99,19 +99,26 @@ class ProtocolDSlGenerator extends AbstractGenerator {
 			@echo AR $@
 			@$(AR) rcs $@ $^
 			
-			@$(SIZE) $(PROJ_NAME)_lib.a 
+			@$(SIZE) $(LIB_NAME)_lib.a
+			
+		$(LIB_NAME)_lib_py.so: $(OBJS)
+			@$(CC) -shared -fPIC -o $(LIB_NAME)_lib_py.so $^
+			
+		clean:
+			@echo RM
+			@rm -f *.o *.d *.a *.so 
 	'''
 	
 	def generateCompilerH() '''
 		typedef unsigned char u8;
 		typedef unsigned short u16;
-		typedef unsigned long u32;
-		typedef unsigned long long u64;
+		typedef unsigned int u32;
+		typedef unsigned long u64;
 		
 		typedef signed char s8;
 		typedef signed short s16;
-		typedef signed long s32;
-		typedef signed long long s64;
+		typedef signed int s32;
+		typedef signed long s64;
 		
 		typedef float r32;
 		typedef double r64;
@@ -208,7 +215,6 @@ class ProtocolDSlGenerator extends AbstractGenerator {
 		u8 «msg.name»_rx_section_i=0;
 		«msg.name»_states_enum «msg.name»_rx_state = «msg.entries.head.rx_st_name»;
 		
-		
 		void reset_«msg.name»_rx() {
 			memset( «msg.name»_rx_buffer, 0,  sizeof(«msg.name»_rx_buffer) );
 			«msg.name»_rx_msg_i = 0;
@@ -219,6 +225,7 @@ class ProtocolDSlGenerator extends AbstractGenerator {
 		
 		int process_«msg.name»_rx_byte(u8 data) {
 			«msg.name»_rx_buffer[«msg.name»_rx_msg_i++] = data;
+			«msg.name»_rx_section_i++;
 			
 			switch( «msg.name»_rx_state ) {
 			«FOR e : msg.entries»
@@ -228,7 +235,9 @@ class ProtocolDSlGenerator extends AbstractGenerator {
 				}
 				
 			«ENDFOR»
-			}
+			} // switch
+			
+			return 0;
 		}
 	'''
 
@@ -237,10 +246,10 @@ class ProtocolDSlGenerator extends AbstractGenerator {
 		«IF spec.value !== null»
 			// Matching values
 			u8 values[] = { «FOR v : spec.value.items SEPARATOR ','»«v.c_hex»«ENDFOR» };
-			if( data == values[«msg.name»_rx_section_i] ) {
-				«msg.name»_rx_section_i++;
-			} else
+			if( data != values[«msg.name»_rx_section_i-1] ) {
 				reset_«msg.name»_rx();
+				return -1;
+			}
 
 		«ENDIF»
 		// Transition
@@ -269,13 +278,17 @@ class ProtocolDSlGenerator extends AbstractGenerator {
 	
 	def dispatch generateMatcher(Csum csum) '''
 		«val msg = csum.parent_msg»
-		if(«msg.name»_rx_section_i >= «csum.sizeof») {
+		u32 size = «csum.sizeof»;
+		
+		if(«msg.name»_rx_section_i >= size) {
 			«csum.type» calc_csum = 0x0000;
-			for(int i=0; i<«msg.name»_rx_msg_i-«csum.sizeof»; i++)
+			
+			for(int i=0; i<«msg.name»_rx_msg_i-size; i++)
 				calc_csum+=«msg.name»_rx_buffer[i];
-				
-			«csum.type» rx_csum;
-			memcpy(&rx_csum, &«csum.selector», sizeof(rx_csum));
+			
+			«csum.type» rx_csum = 0;
+			for(int i=0; i<size; i++)
+				rx_csum = rx_csum<<8 | «msg.name»_rx_buffer[«msg.name»_rx_msg_i-size+i];
 			
 			if(calc_csum!=rx_csum) {
 				reset_«msg.name»_rx();
@@ -299,6 +312,8 @@ class ProtocolDSlGenerator extends AbstractGenerator {
 	'''
 	
 
+	static def addr_ptr(Csum csum) '''&((t_«csum.parent_msg_name»_msg *)«csum.parent_msg_name»_rx_buffer)->msg.«csum.name.toUpperCase»'''
+	
 	static def selector(Entry e) '''«e.parent_msg_name»_msg.msg.«e.name.toUpperCase»'''
 
 	static def sizeof(Entry e) '''sizeof(«e.selector»)'''
