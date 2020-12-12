@@ -20,7 +20,8 @@ protocol demo_protocol {
 		
 		u8 enum EVENT { // Command
 			KEY_DOWN 01h
-			KEY_UP   FFh
+			KEY_UP   02h
+			KEY_REPEAT FFh
 		}
 		
 		bit-mask MODIF { 0:SHIFT, 1:ALT, 2:CTRL, 3-7:RSV }
