@@ -22,7 +22,7 @@ ValueSpec:
 	'[' items+=HEX+ ']';
 
 EnumSpec:
-	type=Type 'enum' name=ID '{'
+	'enum' type=Type name=ID '{'
 		entries+=EnumEntry+
 	'}';
 
@@ -30,10 +30,10 @@ EnumEntry:
 	name=ID value=HEX?;
 
 BitMask:
-	'bit-mask' name=ID '{' regions+=BitRegion (',' regions+=BitRegion)* '}';
+	'bit-mask' type=Type name=ID '{' regions+=BitRegion (',' regions+=BitRegion)* '}';
 
 BitRegion:
-	from=INT ('-' to=INT)? ':' name=ID;
+	name=ID ':' width=INT;
 
 Csum:
 	'check-sum' type=Type crc?='crc'? name=ID;

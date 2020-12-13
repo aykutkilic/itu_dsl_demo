@@ -133,7 +133,7 @@ class ProtocolDSLCGenerator {
 	def generateBitmaskDef(BitMask bm) '''
 		typedef struct {
 			«FOR region : bm.regions»
-				unsigned «region.name» : «if(region.to>region.from) (region.to-region.from+1) else 1»;
+				unsigned «region.name» : «region.width»;
 			«ENDFOR»
 		} «bm.s_name»;
 	'''

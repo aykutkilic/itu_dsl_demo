@@ -7,6 +7,7 @@ protocol demo_protocol {
 	
 	message ping {
 		u8[2] HDR = [DEh EDh]
+		u32   ADDR
 		check-sum u8 CSUM
 	}
 	
@@ -18,13 +19,13 @@ protocol demo_protocol {
 	message keyb_event {
 		u8[2] HDR = [CAh FEh]
 		
-		u8 enum EVENT { // Command
+		enum u8 EVENT { // Command
 			KEY_DOWN 01h
 			KEY_UP   02h
 			KEY_REPEAT FFh
 		}
 		
-		bit-mask MODIF { 0:SHIFT, 1:ALT, 2:CTRL, 3-7:RSV }
+		bit-mask u8 MODIF { SHIFT:1, ALT:1, CTRL:1, RSV:5 }
 		u8 KEY
 		u16 X
 		check-sum u16 CSUM
