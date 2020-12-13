@@ -33,43 +33,44 @@ class ProtocolDSLPythonGenerator {
 		«ENDFOR»
 		
 		class «msg.msgClassName»:
-		    def __init__(self):
-		    	«FOR e : msg.entries»
-		    	self.«e.name.toPyName»= «e.initValue»
-		        «ENDFOR»
-		    
+			def __init__(self):
+				«FOR e : msg.entries»
+					self.«e.name.toPyName»= «e.initValue»
+				«ENDFOR»
+		
 		class «msg.rxClassName»:
 			«msg.generateRxStateEntries»
 		
-		    def __init__(self):
-		        self.__reset()
+			def __init__(self):
+				self.__reset()
 		
-		    def __reset(self):
-		        self.buffer = deque()
-		        self.msg = «msg.msgClassName»()
+			def __reset(self):
+				self.buffer = deque()
+				self.msg = «msg.msgClassName»()
 		
-		        self.state = «msg.rxClassName».RX_ST_HDR
-		        self.state_i = 0
-		        «FOR csum : msg.entries.filter(Csum)»
-		        	«csum.calcCsumName» = 0
-		        «ENDFOR»
-		    
-		    def on_rx(self, data):
-		        self.buffer.append(data)
-		        self.state_i += 1
-		        «msg.entries.map()[]»
-		        «FOR i : 0..msg.entries.length-1»
-		        «if(i==0) 'if' else 'elif'» self.state == «msg.entries.get(i).rxStateSelector»:
-		        	«msg.entries.get(i).generateMatcher»
-		        	«msg.entries.get(i).generateTransition»
-		        «ENDFOR»
-		
+				self.state = «msg.rxClassName».RX_ST_HDR
+				self.state_i = 0
 				«FOR csum : msg.entries.filter(Csum)»
+					«csum.calcCsumName» = 0
+				«ENDFOR»
+		
+			def on_rx(self, data):
+				self.buffer.append(data)
+				self.state_i += 1
+				
+				«FOR csum : msg.entries.filter(Csum)»
+				if self.state < «csum.rxStateSelector»:
 					«csum.calcCsumName» += data
 					«csum.calcCsumName» &= «csum.type.typeMask»
 				«ENDFOR»
+				
+				«FOR i : 0..msg.entries.length-1»
+				«if(i==0) 'if' else 'elif'» self.state == «msg.entries.get(i).rxStateSelector»:
+					«msg.entries.get(i).generateMatcher»
+					«msg.entries.get(i).generateTransition»
+				«ENDFOR»
 		
-		        return None
+				return None
 	'''
 	
 	def generateRxStateEntries(Message msg) '''
@@ -114,10 +115,10 @@ class ProtocolDSLPythonGenerator {
 		if self.state_i >= «e.size»:
 			«val next = e.next»
 			«IF next!==null»
-				self.state = «next.rxStateSelector»
-				self.state_i = 0
+			self.state = «next.rxStateSelector»
+			self.state_i = 0
 			«ELSE»
-				return self.msg
+			return self.msg
 			«ENDIF»
 	'''
 	def dispatch generateMatcher(Spec s) '''
@@ -127,11 +128,15 @@ class ProtocolDSLPythonGenerator {
 			self.__reset()
 			return None
         «ENDIF»
-		«s.msgSelector».append(data)
+        «IF s.count>1»
+			«s.msgSelector».append(data)
+        «ELSE»
+			«s.shiftLeftAndAssign»
+        «ENDIF»
 	'''
 	
 	def dispatch generateMatcher(Csum csum) '''
-		«csum.msgSelector» = («csum.msgSelector» << 8 | data) & «csum.type.typeMask»
+		«csum.shiftLeftAndAssign»
 		if self.state_i >= «csum.size»:
 			if «csum.msgSelector» != «csum.calcCsumName»:
 				self.__reset()
@@ -141,16 +146,15 @@ class ProtocolDSLPythonGenerator {
 	def dispatch initValue(Entry e) '''0'''
 	def dispatch initValue(Spec s) '''«IF(s.count>0)»[]«ELSE»0«ENDIF»'''
 	
+	def shiftLeftAndAssign(Entry e) '''«e.msgSelector» = («e.msgSelector» << 8 | data) & «e.type.typeMask»'''
 	def toPyName(BitRegion r) '''«r.name.toUpperCase»'''
 	def selector(BitRegion r) '''self.«r.toPyName»'''
 	
 	def msgSelector(Entry e) '''self.msg.«e.name.toUpperCase»'''
 	
 	def rxStateName(Entry e) '''RX_ST_«e.name.toUpperCase»'''
-	def rxStateSelector(Entry e) '''«e.parent_msg.msgClassName».RX_ST_«e.name.toUpperCase»'''
+	def rxStateSelector(Entry e) '''«e.parent_msg.rxClassName».RX_ST_«e.name.toUpperCase»'''
 	def calcCsumName(Csum csum) '''self.calc_«csum.name.toLowerCase»'''
 	def msgClassName(Message msg) '''«msg.name.toPyName»Msg'''
 	def rxClassName(Message msg) '''«msg.name.toPyName»RxMsg'''
-	
-	def toPyName(String str) { str.split('_').map[toFirstUpper].join }
 }

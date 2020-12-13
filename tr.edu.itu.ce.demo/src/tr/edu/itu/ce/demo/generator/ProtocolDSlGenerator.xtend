@@ -17,8 +17,8 @@ import tr.edu.itu.ce.demo.protocolDSl.Protocol
  * See https://www.eclipse.org/Xtext/documentation/303_runtime_concepts.html#code-generation
  */
 class ProtocolDSlGenerator extends AbstractGenerator {
-	@Inject ProtocolDSLCGenerator cgen;
-	@Inject ProtocolDSLPythonGenerator pygen;
+	@Inject ProtocolDSLCGenerator cgen
+	@Inject ProtocolDSLPythonGenerator pygen
 	
 	override void doGenerate(
 		Resource resource,
@@ -26,8 +26,8 @@ class ProtocolDSlGenerator extends AbstractGenerator {
 		IGeneratorContext context
 	) {
 		fsa.generateFile('Makefile', cgen.generateMakefile(resource.contents.head as Protocol))
-
 		fsa.generateFile('Compiler.h', cgen.generateCompilerH())
+
 		var messages = resource.allContents.filter(Message).toList
 		messages.forEach [
 			fsa.generateFile(it.name + '.h', cgen.generateMessageCHeader(it))

@@ -1,15 +1,15 @@
 package tr.edu.itu.ce.demo.generator
 
+import java.util.ArrayList
+import java.util.List
 import org.eclipse.xtext.EcoreUtil2
 import org.eclipse.xtext.util.Pair
+import org.eclipse.xtext.util.Tuples
+import org.eclipse.xtext.xbase.lib.Functions.Function2
 import tr.edu.itu.ce.demo.protocolDSl.BitRegion
 import tr.edu.itu.ce.demo.protocolDSl.Entry
 import tr.edu.itu.ce.demo.protocolDSl.Message
 import tr.edu.itu.ce.demo.protocolDSl.Spec
-import java.util.List
-import java.util.ArrayList
-import org.eclipse.xtext.util.Tuples
-import org.eclipse.xtext.xbase.lib.Functions.Function2
 
 class ProtocolDSLGenUtils {
 	def parent_msg(Entry e) { e.eContainer as Message }
@@ -27,6 +27,8 @@ class ProtocolDSLGenUtils {
 	}
 
 	def next(Entry e) { EcoreUtil2.getNextSibling(e) as Entry }
+	
+	def toPyName(String str) { str.split('_').map[toFirstUpper].join }
 
 	def dispatch size(Entry e) { e.type.typeSize }
 
