@@ -26,13 +26,19 @@ class ProtocolDSLGenUtils {
 		'0x' + Integer.toHexString(i).toUpperCase
 	}
 
+	def prev(Entry e) { EcoreUtil2.getPreviousSibling(e) as Entry }
 	def next(Entry e) { EcoreUtil2.getNextSibling(e) as Entry }
 	
 	def toPyName(String str) { str.split('_').map[toFirstUpper].join }
 
 	def dispatch size(Entry e) { e.type.typeSize }
-
 	def dispatch size(Spec s) { s.type.typeSize * s.itemCount }
+	
+	// Question: What is the problem with this?
+	def Integer offset(Entry e) {
+		val prev = e.prev
+		if(prev !== null) prev.offset + prev.size else 0
+	}
 
 	def itemCount(Spec s) {
 		if (s.count >= 1)

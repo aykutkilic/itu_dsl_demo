@@ -33,6 +33,8 @@ protocol demo_protocol {
 	
 	message terminate_sess {
 		u8[2] HDR = [BEh EFh]
+		u8 KEY
+		u16 X
 		check-sum u32 CSUM1
 		check-sum u32 CSUM2
 	}
