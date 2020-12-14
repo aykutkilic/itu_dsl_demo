@@ -50,7 +50,7 @@ class ProtocolDSLCGenerator {
 		
 		.PHONY: $(LIB_NAME)_lib.a $(LIB_NAME)_lib_py.so
 		
-		all: $(LIB_NAME)_lib.a $(LIB_NAME)_lib_py.so
+		all: $(LIB_NAME)_lib.a $(LIB_NAME)_lib_py.so test
 		rebuild: clean all
 		
 		proj: $(LIB_NAME)_lib.a
@@ -70,6 +70,9 @@ class ProtocolDSLCGenerator {
 			
 		$(LIB_NAME)_lib_py.so: $(OBJS)
 			@$(CC) -shared -fPIC -o $(LIB_NAME)_lib_py.so $^
+			
+		test:
+			python3 suite.py
 			
 		clean:
 			@echo RM

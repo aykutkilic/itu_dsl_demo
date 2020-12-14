@@ -16,6 +16,16 @@ protocol demo_protocol {
 		check-sum u8 CSUM
 	}
 	
+	message dummy {
+		enum u8 EVENT { // Command
+			KEY_DOWN 01h
+			KEY_UP   02h
+			KEY_REPEAT FFh
+		}
+		
+		bit-mask u8 MODIF { SHIFT:1, ALT:1, CTRL:1, RSV:5 }
+	}
+	
 	message keyb_event {
 		u8[2] HDR = [CAh FEh]
 		

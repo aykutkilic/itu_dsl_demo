@@ -27,12 +27,17 @@ class ProtocolDSlGenerator extends AbstractGenerator {
 	) {
 		fsa.generateFile('Makefile', cgen.generateMakefile(resource.contents.head as Protocol))
 		fsa.generateFile('Compiler.h', cgen.generateCompilerH())
+		
+		val protocol = resource.contents.head as Protocol
+		if(protocol !== null)
+			fsa.generateFile('suite.py', pygen.generateTestSuite(protocol))
 
 		var messages = resource.allContents.filter(Message).toList
 		messages.forEach [
 			fsa.generateFile(it.name + '.h', cgen.generateMessageCHeader(it))
 			fsa.generateFile(it.name + '.c', cgen.generateMessageCSource(it))
 			fsa.generateFile(it.name + '.py', pygen.generateMessagePyModule(it))
+			fsa.generateFile(it.name + '_test.py', pygen.generateUnitTest(it))
 		]
 	}
 }

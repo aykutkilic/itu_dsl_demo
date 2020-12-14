@@ -60,7 +60,7 @@ class ProtocolDSLPythonGenerator {
 				self.buffer = deque()
 				self.msg = «msg.msgClassName»()
 		
-				self.state = «msg.rxClassName».RX_ST_HDR
+				self.state = «msg.entries.head.rxStateSelector»
 				self.state_i = 0
 				«FOR csum : msg.entries.filter(Csum)»
 					«csum.calcCsumName» = 0
@@ -92,7 +92,7 @@ class ProtocolDSLPythonGenerator {
 	'''
 	
 	def dispatch generateClass(BitMask bm) '''
-		class MODIF:
+		class «bm.name.toUpperCase»:
 			def __init__(self, «FOR r : bm.regions SEPARATOR ', '»«r.toPyName» = 0«ENDFOR»):
 				«FOR r : bm.regions»
 				«r.selector» = «r.toPyName»
@@ -103,7 +103,7 @@ class ProtocolDSLPythonGenerator {
 									«rgn.first.selector» = data>>«rgn.second» & «rgn.first.mask»
 								«ENDFOR»
 		
-			@static
+			@staticmethod
 			def to_bin():
 				return \
 					«FOR rgn : bm.regions.accumulate(0, [r,i | i+r.width]) SEPARATOR ' | \\'»
@@ -175,7 +175,7 @@ class ProtocolDSLPythonGenerator {
 	'''
 	
 	def generateBuilder(Message msg) '''
-	class «msg.msgClassName»Builder:
+	class «msg.builderClassName»:
 		def __init__(self):
 			self.msg = «msg.msgClassName»()
 			self.set = set()
@@ -198,8 +198,71 @@ class ProtocolDSLPythonGenerator {
 			return self.msg
 	'''
 
+
+	def generateUnitTest(Message msg) '''
+		import unittest
+		from ctypes import *
+		
+		from «msg.name» import «msg.builderClassName», «msg.rxClassName»
+		
+		
+		class Test«msg.msgClassName»(unittest.TestCase):
+			def test_default_msg(self):
+				cdll = CDLL('./«msg.soFileName»')
+		
+				msg_data = «msg.builderClassName»().build().get_bytes()
+				result = [cdll.process_«msg.name»_rx_byte(b) for b in msg_data]
+				expected = [0]*len(msg_data)
+				expected[-1] = 1
+				self.assertListEqual(expected, result)
+		
+			def test_default_msg_py_rx(self):
+				rx = «msg.rxClassName»()
+				msg_data = «msg.builderClassName»().build().get_bytes()
+				result = [rx.on_rx(b) for b in msg_data]
+				expected = [None]*(len(msg_data)-1)
+				self.assertListEqual(expected, result[:-1])
+				self.msg = result[-1]
+				self.assertIsNotNone(self.msg)
+				«FOR e : msg.entries»
+				self.assertEqual(«e.msgSelector», «e.fixExpr»)
+				«ENDFOR»
+		
+		if __name__ == '__main__':
+			unittest.main()
+	'''
+	
+	def generateTestSuite(Protocol p) '''
+		import sys
+		import unittest
+		
+		«FOR m : p.messages»
+		from «m.name»_test import Test«m.msgClassName»
+		«ENDFOR»
+		
+		if __name__ == '__main__':
+		    suites = []
+		
+		def add(TestCaseClass):
+			suites.append(
+				unittest.defaultTestLoader.loadTestsFromTestCase(TestCaseClass))
+		
+		«FOR m : p.messages»
+		add(Test«m.msgClassName»)
+		«ENDFOR»
+		
+		
+		composite_suite = unittest.TestSuite(suites)
+		result = unittest.TextTestRunner(verbosity=2).run(composite_suite)
+		
+		if result.wasSuccessful():
+			sys.exit(0)
+		else:
+			sys.exit(1)
+	'''
+	
 	def dispatch fixExpr(Entry e) '''0'''	
-	def dispatch fixExpr(Spec s) '''«IF s.value!==null»«s.listOfValues»«ELSE»0«ENDIF»'''
+	def dispatch fixExpr(Spec s) '''«IF s.value!==null»«s.listOfValues»«ELSE»«IF s.count>1»[0]*«s.count»«ELSE»0«ENDIF»«ENDIF»'''
 	def dispatch fixExpr(Csum c) '''sum(self.msg.get_bytes()[:«c.offset»]) & «c.type.typeMask»'''
 	
 	def dispatch appendBytesExpr(Spec s) '''
@@ -229,7 +292,11 @@ class ProtocolDSLPythonGenerator {
 	def rxStateName(Entry e) '''RX_ST_«e.name.toUpperCase»'''
 	def rxStateSelector(Entry e) '''«e.parent_msg.rxClassName».RX_ST_«e.name.toUpperCase»'''
 	def calcCsumName(Csum csum) '''self.calc_«csum.name.toLowerCase»'''
+	
 	def msgClassName(Message msg) '''«msg.name.toPyName»Msg'''
+	def builderClassName(Message msg) '''«msg.msgClassName»Builder'''
 	def rxClassName(Message msg) '''«msg.name.toPyName»MsgRx'''
+	
 	def listOfValues(Spec s) '''[«FOR v : s.value.items SEPARATOR ','»«v.c_hex»«ENDFOR»]'''
+	def soFileName(Message msg) '''«(msg.eContainer as Protocol).name»_lib_py.so'''
 }
