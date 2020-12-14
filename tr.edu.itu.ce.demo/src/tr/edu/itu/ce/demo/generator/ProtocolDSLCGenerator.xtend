@@ -136,7 +136,7 @@ class ProtocolDSLCGenerator {
 	def generateBitmaskDef(BitMask bm) '''
 		typedef struct {
 			«FOR region : bm.regions»
-				unsigned «region.name» : «region.width»;
+				«bm.type» «region.name» : «region.width»;
 			«ENDFOR»
 		} «bm.s_name»;
 	'''
@@ -152,7 +152,7 @@ class ProtocolDSLCGenerator {
 		} «bm.name»;
 	'''
 
-	def dispatch generateEntry(EnumSpec enm) '''«enm.c_name» «enm.name»;'''
+	def dispatch generateEntry(EnumSpec enm) '''«enm.type» «enm.name»;'''
 	
 	def dispatch generateEntry(Csum csum) '''«csum.type» «csum.name»;'''
 
